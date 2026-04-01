@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; }
     
-    /* Trava a tela para impedir completamente a rolagem */
+    /* COMPORTAMENTO PADRÃO (DESKTOP): Tela travada, sem rolagem */
     html, body {
       margin: 0;
       padding: 0;
@@ -19,7 +19,7 @@
       color: #e5e7eb;
     }
 
-    /* Grid principal cobrindo 100% da tela */
+    /* Grid principal cobrindo 100% da tela (Desktop) */
     .wrap {
       display: grid;
       grid-template-areas:
@@ -43,23 +43,21 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 20px; /* Espaçamento entre logo, infos e stats */
+      gap: 20px; 
     }
     
-    /* Estilização do Logo inserido */
     .logo {
-      height: 48px; /* Altura controlada para não empurrar a tela pra baixo */
+      height: 48px; 
       width: auto;
       object-fit: contain;
     }
 
     .header-info {
-      flex: 1; /* Ocupa o espaço central do cabeçalho */
+      flex: 1; 
     }
     .header-info h1 { margin: 0 0 2px; font-size: 20px; }
     .header-info p { margin: 0; font-size: 13px; color: #cbd5e1; }
     
-    /* Créditos do Autor */
     .author {
       display: block;
       margin-top: 4px;
@@ -100,7 +98,7 @@
       border-radius: 8px;
     }
 
-    /* 3. Painel de Controles (Embaixo à direita) */
+    /* 3. Painel de Controles */
     .controls {
       grid-area: controls;
       background: #111827;
@@ -163,6 +161,75 @@
       color: #94a3b8;
       line-height: 1.3;
       align-self: center;
+    }
+
+    /* ========================================================== */
+    /* RESPONSIVIDADE PARA CELULARES E TABLETS (Abaixo de 900px)  */
+    /* ========================================================== */
+    @media (max-width: 900px) {
+      html, body {
+        /* Libera a rolagem vertical em telas pequenas */
+        height: auto;
+        overflow-y: auto; 
+        overflow-x: hidden;
+      }
+      
+      .wrap {
+        /* Muda de Grid estático para Flexbox empilhado (Coluna) */
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+      }
+      
+      .header {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+      }
+      
+      .header-stats {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      
+      /* Garante alturas generosas para os canvas no modo celular */
+      #billiardBox {
+        height: 60vh;
+        min-height: 350px;
+        flex-shrink: 0;
+      }
+      
+      #phaseBox {
+        height: 40vh;
+        min-height: 250px;
+        flex-shrink: 0;
+      }
+
+      .controls {
+        /* 2 colunas para tablets ou celulares deitados */
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .hint {
+        grid-column: 1 / -1;
+        text-align: center;
+        margin-top: 8px;
+      }
+
+      .buttons-row {
+        flex-wrap: wrap;
+      }
+      .buttons-row button {
+        flex: 1 1 45%; /* Os botões quebram em duas linhas se precisarem */
+      }
+    }
+
+    /* Celulares muito estreitos (Em pé) */
+    @media (max-width: 500px) {
+      .controls {
+        grid-template-columns: 1fr; /* Tudo em 1 coluna */
+      }
     }
   </style>
 </head>
