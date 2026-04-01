@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bilhar Cn-SCB</title>
+  <style>
+    * { box-sizing: border-box; }
+    
+    /* Trava a tela para impedir completamente a rolagem */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden; 
+      font-family: Arial, Helvetica, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+
+    /* Grid principal cobrindo 100% da tela */
+    .wrap {
+      display: grid;
+      grid-template-areas:
+        "header header"
+        "billiard phase"
+        "billiard controls";
+      grid-template-columns: 1.3fr 1fr;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      padding: 12px;
+      height: 100%;
+    }
+
+    /* 1. Header (Topo) */
+    .header {
+      grid-area: header;
+      background: #111827;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px; /* Espaçamento entre logo, infos e stats */
+    }
+    
+    /* Estilização do Logo inserido */
+    .logo {
+      height: 48px; /* Altura controlada para não empurrar a tela pra baixo */
+      width: auto;
+      object-fit: contain;
+    }
+
+    .header-info {
+      flex: 1; /* Ocupa o espaço central do cabeçalho */
+    }
+    .header-info h1 { margin: 0 0 2px; font-size: 20px; }
+    .header-info p { margin: 0; font-size: 13px; color: #cbd5e1; }
+    
+    /* Créditos do Autor */
+    .author {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    .header-stats { display: flex; gap: 10px; }
+    .stat {
+      background: #0b1220;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .stat span { color: #93c5fd; }
+
+    /* 2. Containers dos Canvas */
+    .canvasBox {
+      background: #111827;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      min-height: 0; 
+      min-width: 0;
+    }
+    #billiardBox { grid-area: billiard; }
+    #phaseBox { grid-area: phase; }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #020617;
+      border-radius: 8px;
+    }
+
+    /* 3. Painel de Controles (Embaixo à direita) */
+    .controls {
+      grid-area: controls;
+      background: #111827;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .group { margin-bottom: 0; }
+    .group-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 11px;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+    .value { color: #93c5fd; font-weight: bold; float: right; }
+    input[type="range"], select { width: 100%; margin: 0; }
+    select {
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #0b1220;
+      color: #e5e7eb;
+      font-size: 12px;
+    }
+    
+    .buttons-row {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    button {
+      flex: 1;
+      padding: 10px 0;
+      border: 0;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 12px;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+      transition: filter 0.2s;
+    }
+    button:hover { filter: brightness(1.1); }
+    button.secondary { background: #059669; }
+    button.ghost { background: #475569; }
+
+    .hint {
+      grid-column: span 2;
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.3;
+      align-self: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <img src="logo_ifal.png" alt="Instituto Federal Alagoas - Campus Piranhas" class="logo">
+      
+      <div class="header-info">
+        <h1 id="titleText">Bilhar C3-SCB</h1>
+        <p id="descText">Dinâmica do bilhar com simetria C3, formado por 3 setores circulares e 3 segmentos retos.</p>
+        <span class="author">feito por: Ricardo Batista do Carmo</span>
+      </div>
+      
+      <div class="header-stats">
+        <div class="stat">Colisões: <span id="collisions">0</span></div>
+        <div class="stat">Último ℓ: <span id="ellValue">0.0000</span></div>
+        <div class="stat">Último vₜ: <span id="vtValue">0.0000</span></div>
+      </div>
+    </div>
+
+    <div class="canvasBox" id="billiardBox">
+      <canvas id="billiardCanvas"></canvas>
+    </div>
+
+    <div class="canvasBox" id="phaseBox">
+      <canvas id="phaseCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+      <div class="group">
+        <label for="symmetrySlider">Simetria C <span class="value" id="symmetryValue">3</span></label>
+        <input id="symmetrySlider" type="range" min="3" max="20" step="1" value="3">
+      </div>
+      <div class="group">
+        <label for="rSlider">Parâmetro r <span class="value" id="rValue">0.250</span></label>
+        <input id="rSlider" type="range" min="0.05" max="0.49" step="0.005" value="0.25">
+      </div>
+      <div class="group">
+        <label for="traceMode">Rastros das colisões</label>
+        <select id="traceMode">
+          <option value="on" selected>Manter rastros</option>
+          <option value="off">Retirar rastros</option>
+        </select>
+      </div>
+
+      <div class="group">
+        <label for="trailSlider">Comp. do rastro <span class="value" id="trailValue">400</span></label>
+        <input id="trailSlider" type="range" min="50" max="4000" step="50" value="400">
+      </div>
+      <div class="group">
+        <label for="dtSlider">Passo temporal <span class="value" id="dtValue">0.90</span></label>
+        <input id="dtSlider" type="range" min="0.1" max="2.5" step="0.05" value="0.9">
+      </div>
+      <div class="group">
+        <label for="angSlider">Ângulo inicial (°) <span class="value" id="angValue">29.0</span></label>
+        <input id="angSlider" type="range" min="0" max="360" step="1" value="29">
+      </div>
+
+      <div class="group-row">
+        <div>
+          <label for="x0Slider">x inicial <span class="value" id="x0Value">0.00</span></label>
+          <input id="x0Slider" type="range" min="-0.60" max="0.60" step="0.005" value="0.00">
+        </div>
+        <div>
+          <label for="y0Slider">y inicial <span class="value" id="y0Value">0.00</span></label>
+          <input id="y0Slider" type="range" min="-0.60" max="0.60" step="0.005" value="0.00">
+        </div>
+      </div>
+      
+      <div class="hint">
+        O controlador do passo temporal começa em 0.1. Você pode escolher a simetria Cn e alternar entre rastros. Restrição fixa: <strong>R = 2r</strong>.
+      </div>
+
+      <div class="buttons-row">
+        <button id="applyBtn">Aplicar Condições</button>
+        <button id="exampleBtn" class="secondary">Exemplo C3</button>
+        <button id="toggleBtn" class="ghost">Pausar</button>
+        <button id="clearBtn" class="ghost">Reiniciar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const billiardBox = document.getElementById('billiardBox');
+    const phaseBox = document.getElementById('phaseBox');
+    const billiardCanvas = document.getElementById('billiardCanvas');
+    const bctx = billiardCanvas.getContext('2d');
+    const phaseCanvas = document.getElementById('phaseCanvas');
+    const pctx = phaseCanvas.getContext('2d');
+
+    const symmetrySlider = document.getElementById('symmetrySlider');
+    const rSlider = document.getElementById('rSlider');
+    const traceMode = document.getElementById('traceMode');
+    const trailSlider = document.getElementById('trailSlider');
+    const dtSlider = document.getElementById('dtSlider');
+    const x0Slider = document.getElementById('x0Slider');
+    const y0Slider = document.getElementById('y0Slider');
+    const angSlider = document.getElementById('angSlider');
+
+    const titleText = document.getElementById('titleText');
+    const descText = document.getElementById('descText');
+    const symmetryValue = document.getElementById('symmetryValue');
+    const rValue = document.getElementById('rValue');
+    const trailValue = document.getElementById('trailValue');
+    const dtValue = document.getElementById('dtValue');
+    const x0Value = document.getElementById('x0Value');
+    const y0Value = document.getElementById('y0Value');
+    const angValue = document.getElementById('angValue');
+    const collisionsEl = document.getElementById('collisions');
+    const ellValueEl = document.getElementById('ellValue');
+    const vtValueEl = document.getElementById('vtValue');
+
+    const applyBtn = document.getElementById('applyBtn');
+    const exampleBtn = document.getElementById('exampleBtn');
+    const toggleBtn = document.getElementById('toggleBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    const TAU = 2 * Math.PI;
+    const EPS = 1e-8;
+    const PUSH_EPS = 5e-7;
+    const FIXED_SPEED = 1.0;
+
+    let SCALE = 220;
+    let geometry = null;
+    let state = null;
+    let running = true;
+    let collisionCount = 0;
+    let trail = [];
+    let phasePoints = [];
+
+    function resizeCanvases() {
+      billiardCanvas.width = billiardBox.clientWidth - 20; 
+      billiardCanvas.height = billiardBox.clientHeight - 20;
+      phaseCanvas.width = phaseBox.clientWidth - 20;
+      phaseCanvas.height = phaseBox.clientHeight - 20;
+      SCALE = Math.min(billiardCanvas.width, billiardCanvas.height) / 2.3;
+      if (geometry) drawAll();
+    }
+    window.addEventListener('resize', resizeCanvases);
+
+    function rot(p, ang) {
+      const c = Math.cos(ang), s = Math.sin(ang);
+      return { x: c * p.x - s * p.y, y: s * p.x + c * p.y };
+    }
+    function dot(a, b) { return a.x * b.x + a.y * b.y; }
+    function cross(a, b) { return a.x * b.y - a.y * b.x; }
+    function norm(a) { return Math.hypot(a.x, a.y); }
+    function add(a, b) { return { x: a.x + b.x, y: a.y + b.y }; }
+    function sub(a, b) { return { x: a.x - b.x, y: a.y - b.y }; }
+    function mul(a, s) { return { x: a.x * s, y: a.y * s }; }
+    function normalize(v) {
+      const n = norm(v) || 1;
+      return { x: v.x / n, y: v.y / n };
+    }
+    function normalizeAngle(a) {
+      while (a < 0) a += TAU;
+      while (a >= TAU) a -= TAU;
+      return a;
+    }
+    function ccwDelta(a0, a1) {
+      let d = normalizeAngle(a1) - normalizeAngle(a0);
+      if (d < 0) d += TAU;
+      return d;
+    }
+    function angleInCCWInterval(theta, start, end) {
+      theta = normalizeAngle(theta);
+      start = normalizeAngle(start);
+      const width = ccwDelta(start, end);
+      let d = theta - start;
+      if (d < 0) d += TAU;
+      return d >= -1e-10 && d <= width + 1e-10;
+    }
+
+    function updateLabels() {
+      const n = +symmetrySlider.value;
+      symmetryValue.textContent = String(n);
+      titleText.textContent = `Bilhar C${n}-SCB`;
+      rValue.textContent = (+rSlider.value).toFixed(3);
+      trailValue.textContent = trailSlider.value;
+      dtValue.textContent = (+dtSlider.value).toFixed(2);
+      x0Value.textContent = (+x0Slider.value).toFixed(2);
+      y0Value.textContent = (+y0Slider.value).toFixed(2);
+      angValue.textContent = (+angSlider.value).toFixed(1);
+    }
+
+    function buildCnGeometry(n, r) {
+      const alpha = TAU / n;
+      const R = 2 * r;
+      const P0 = { x: 1, y: 0 };
+      const A = rot(P0, alpha);
+      const centerBig0 = { x: 1 - R, y: 0 };
+      const centerSmall0 = mul(A, 1 - r);
+
+      const d = sub(centerSmall0, centerBig0);
+      const dist = norm(d);
+      const rhs = R - r;
+      if (Math.abs(rhs) >= dist) {
+        throw new Error('Geometria inválida para este valor de r e esta simetria.');
+      }
+
+      const theta = Math.atan2(d.y, d.x);
+      const beta = Math.acos(rhs / dist);
+      const phi = theta - beta;
+      const tangentNormal = { x: Math.cos(phi), y: Math.sin(phi) };
+
+      const C = add(centerBig0, mul(tangentNormal, R));
+      const B = add(centerSmall0, mul(tangentNormal, r));
+      const bigEndAng = Math.atan2(C.y - centerBig0.y, C.x - centerBig0.x);
+      const smallStartAng = Math.atan2(B.y - centerSmall0.y, B.x - centerSmall0.x);
+      const smallEndAng = Math.atan2(A.y - centerSmall0.y, A.x - centerSmall0.x);
+
+      const pieces = [];
+      for (let k = 0; k < n; k++) {
+        const ang = k * alpha;
+        pieces.push({
+          type: 'arc', family: 'big', center: rot(centerBig0, ang), radius: R,
+          a0: normalizeAngle(ang), a1: normalizeAngle(ang + bigEndAng), color: '#ef4444'
+        });
+        pieces.push({
+          type: 'line', family: 'straight', p1: rot(C, ang), p2: rot(B, ang), color: '#f8fafc'
+        });
+        pieces.push({
+          type: 'arc', family: 'small', center: rot(centerSmall0, ang), radius: r,
+          a0: normalizeAngle(ang + smallStartAng), a1: normalizeAngle(ang + smallEndAng), color: '#3b82f6'
+        });
+      }
+
+      let totalLength = 0;
+      for (const piece of pieces) {
+        piece.offset = totalLength;
+        if (piece.type === 'line') {
+          piece.length = norm(sub(piece.p2, piece.p1));
+          const t = normalize(sub(piece.p2, piece.p1));
+          let nIn = { x: -t.y, y: t.x };
+          const mid = mul(add(piece.p1, piece.p2), 0.5);
+          if (dot(nIn, mul(mid, -1)) < 0) nIn = mul(nIn, -1);
+          piece.inwardNormal = normalize(nIn);
+          piece.tangent = t;
+        } else {
+          piece.delta = ccwDelta(piece.a0, piece.a1);
+          piece.length = piece.radius * piece.delta;
+        }
+        totalLength += piece.length;
+      }
+      return { n, r, R, alpha, pieces, totalLength };
+    }
+
+    function pointInside(p, geom) {
+      for (const piece of geom.pieces) {
+        if (piece.type === 'line') {
+          const side = dot(sub(p, piece.p1), piece.inwardNormal);
+          if (side < -1e-10) return false;
+        } else {
+          const rr = norm(sub(p, piece.center));
+          if (rr > piece.radius + 1e-10) return false;
+        }
+      }
+      return true;
+    }
+
+    function rayLineIntersection(x, v, p1, p2) {
+      const s = sub(p2, p1);
+      const den = cross(v, s);
+      if (Math.abs(den) < 1e-14) return null;
+      const q = sub(p1, x);
+      const t = cross(q, s) / den;
+      const u = cross(q, v) / den;
+      if (t > EPS && u >= -1e-10 && u <= 1 + 1e-10) {
+        return { t, point: add(x, mul(v, t)) };
+      }
+      return null;
+    }
+
+    function rayArcIntersections(x, v, center, radius, a0, a1) {
+      const d = sub(x, center);
+      const A = dot(v, v);
+      const B = 2 * dot(d, v);
+      const C = dot(d, d) - radius * radius;
+      const disc = B * B - 4 * A * C;
+      if (disc < 0) return [];
+      const sdisc = Math.sqrt(Math.max(0, disc));
+      const roots = [(-B - sdisc) / (2 * A), (-B + sdisc) / (2 * A)];
+      const hits = [];
+      for (const t of roots) {
+        if (t <= EPS) continue;
+        const point = add(x, mul(v, t));
+        const ang = Math.atan2(point.y - center.y, point.x - center.x);
+        if (angleInCCWInterval(ang, a0, a1)) hits.push({ t, point });
+      }
+      return hits;
+    }
+
+    function computeNextCollision(x, v, geom) {
+      let best = null;
+      for (let i = 0; i < geom.pieces.length; i++) {
+        const piece = geom.pieces[i];
+        if (piece.type === 'line') {
+          const hit = rayLineIntersection(x, v, piece.p1, piece.p2);
+          if (!hit) continue;
+          if (dot(v, piece.inwardNormal) >= -1e-12) continue;
+          if (!best || hit.t < best.t) best = { ...hit, piece };
+        } else {
+          const hits = rayArcIntersections(x, v, piece.center, piece.radius, piece.a0, piece.a1);
+          for (const hit of hits) {
+            const inwardNormal = normalize(sub(piece.center, hit.point));
+            if (dot(v, inwardNormal) >= -1e-12) continue;
+            if (!best || hit.t < best.t) best = { ...hit, piece };
+          }
+        }
+      }
+      return best;
+    }
+
+    function reflectVelocity(v, piece, point) {
+      let inwardNormal, tangent;
+      if (piece.type === 'line') {
+        inwardNormal = piece.inwardNormal;
+        tangent = piece.tangent;
+      } else {
+        inwardNormal = normalize(sub(piece.center, point));
+        tangent = { x: -inwardNormal.y, y: inwardNormal.x };
+      }
+      const outwardNormal = mul(inwardNormal, -1);
+      const vn = dot(v, outwardNormal);
+      const vNew = sub(v, mul(outwardNormal, 2 * vn));
+      return { v: vNew, inwardNormal, tangent: normalize(tangent) };
+    }
+
+    function pieceArcLength(piece, point) {
+      if (piece.type === 'line') return piece.offset + norm(sub(point, piece.p1));
+      const ang = Math.atan2(point.y - piece.center.y, point.x - piece.center.x);
+      let d = normalizeAngle(ang) - normalizeAngle(piece.a0);
+      if (d < 0) d += TAU;
+      d = Math.min(d, piece.delta);
+      return piece.offset + piece.radius * d;
+    }
+
+    function resetState() {
+      geometry = buildCnGeometry(+symmetrySlider.value, +rSlider.value);
+      collisionCount = 0;
+      collisionsEl.textContent = '0';
+      ellValueEl.textContent = '0.0000';
+      vtValueEl.textContent = '0.0000';
+      trail = [];
+      phasePoints = [];
+
+      let x = { x: +x0Slider.value, y: +y0Slider.value };
+      if (!pointInside(x, geometry)) {
+        x = { x: 0.0, y: 0.0 };
+        x0Slider.value = '0.00';
+        y0Slider.value = '0.00';
+        updateLabels();
+      }
+
+      const ang = (+angSlider.value) * Math.PI / 180;
+      const v = { x: FIXED_SPEED * Math.cos(ang), y: FIXED_SPEED * Math.sin(ang) };
+      state = { x, v };
+      trail.push({ ...x });
+      drawAll();
+    }
+
+    function step(dt) {
+      let remaining = dt;
+      let guard = 0;
+      while (remaining > 0 && guard < 40) {
+        guard++;
+        const hit = computeNextCollision(state.x, state.v, geometry);
+        if (!hit) {
+          const trial = add(state.x, mul(state.v, remaining));
+          if (pointInside(trial, geometry)) {
+            state.x = trial;
+            if (traceMode.value === 'on') trail.push({ ...state.x });
+          }
+          break;
+        }
+
+        if (hit.t > remaining) {
+          state.x = add(state.x, mul(state.v, remaining));
+          if (traceMode.value === 'on') trail.push({ ...state.x });
+          remaining = 0;
+          break;
+        }
+
+        state.x = hit.point;
+        if (traceMode.value === 'on') trail.push({ ...state.x });
+        const reflected = reflectVelocity(state.v, hit.piece, hit.point);
+        state.v = reflected.v;
+
+        collisionCount += 1;
+        collisionsEl.textContent = String(collisionCount);
+
+        const ell = pieceArcLength(hit.piece, hit.point) / geometry.totalLength;
+        const speed = norm(state.v);
+        const vt = dot(state.v, reflected.tangent) / speed;
+        ellValueEl.textContent = ell.toFixed(4);
+        vtValueEl.textContent = vt.toFixed(4);
+        phasePoints.push({ ell, vt });
+
+        state.x = add(state.x, mul(reflected.inwardNormal, PUSH_EPS));
+        remaining -= hit.t;
+      }
+
+      if (traceMode.value === 'on') {
+        const maxTrail = +trailSlider.value;
+        if (trail.length > maxTrail) trail.splice(0, trail.length - maxTrail);
+      } else {
+        trail = [{ ...state.x }];
+      }
+
+      if (phasePoints.length > 12000) phasePoints.splice(0, phasePoints.length - 12000);
+    }
+
+    function worldToCanvas(p) {
+      return {
+        x: billiardCanvas.width / 2 + SCALE * p.x,
+        y: billiardCanvas.height / 2 - SCALE * p.y
+      };
+    }
+
+    function drawGuides() {
+      const O = worldToCanvas({ x: 0, y: 0 });
+      for (let k = 0; k < geometry.n; k++) {
+        const dir = rot({ x: 1.12, y: 0 }, k * geometry.alpha);
+        const p = worldToCanvas(dir);
+        bctx.beginPath();
+        bctx.moveTo(O.x, O.y);
+        bctx.lineTo(p.x, p.y);
+        bctx.strokeStyle = 'rgba(148,163,184,0.18)';
+        bctx.lineWidth = 1;
+        bctx.stroke();
+      }
+    }
+
+    function drawBoundary() {
+      for (const piece of geometry.pieces) {
+        bctx.beginPath();
+        if (piece.type === 'line') {
+          const a = worldToCanvas(piece.p1);
+          const b = worldToCanvas(piece.p2);
+          bctx.moveTo(a.x, a.y);
+          bctx.lineTo(b.x, b.y);
+        } else {
+          const c = worldToCanvas(piece.center);
+          bctx.arc(c.x, c.y, SCALE * piece.radius, -piece.a0, -piece.a1, true);
+        }
+        bctx.strokeStyle = piece.color;
+        bctx.lineWidth = 4;
+        bctx.stroke();
+      }
+    }
+
+    function drawTrajectory() {
+      if (traceMode.value === 'on' && trail.length >= 2) {
+        bctx.beginPath();
+        const first = worldToCanvas(trail[0]);
+        bctx.moveTo(first.x, first.y);
+        for (let i = 1; i < trail.length; i++) {
+          const q = worldToCanvas(trail[i]);
+          bctx.lineTo(q.x, q.y);
+        }
+        bctx.strokeStyle = 'rgba(202, 138, 4, 0.78)';
+        bctx.lineWidth = 1.4;
+        bctx.stroke();
+      }
+      const pos = worldToCanvas(state.x);
+      bctx.beginPath();
+      bctx.arc(pos.x, pos.y, 4.5, 0, TAU);
+      bctx.fillStyle = '#facc15';
+      bctx.fill();
+    }
+
+    function drawPhaseSpace() {
+      pctx.clearRect(0, 0, phaseCanvas.width, phaseCanvas.height);
+      pctx.fillStyle = '#020617';
+      pctx.fillRect(0, 0, phaseCanvas.width, phaseCanvas.height);
+
+      const xMin = 40, xMax = phaseCanvas.width - 20;
+      const yMin = 20, yMax = phaseCanvas.height - 20;
+
+      pctx.strokeStyle = 'rgba(148,163,184,0.45)';
+      pctx.lineWidth = 1;
+      pctx.beginPath();
+      pctx.moveTo(xMin, (yMin + yMax) / 2);
+      pctx.lineTo(xMax, (yMin + yMax) / 2);
+      pctx.moveTo(xMin, yMin);
+      pctx.lineTo(xMin, yMax);
+      pctx.stroke();
+
+      pctx.fillStyle = '#cbd5e1';
+      pctx.font = '12px Arial';
+      pctx.fillText('vₜ', 18, 26);
+      pctx.fillText('ℓ', phaseCanvas.width - 12, phaseCanvas.height - 8);
+      
+      pctx.fillStyle = 'rgba(226,232,240,0.38)';
+      for (const pt of phasePoints) {
+        const x = xMin + pt.ell * (xMax - xMin);
+        const y = yMin + (1 - (pt.vt + 1) / 2) * (yMax - yMin);
+        pctx.fillRect(x, y, 1.6, 1.6);
+      }
+    }
+
+    function drawAll() {
+      bctx.clearRect(0, 0, billiardCanvas.width, billiardCanvas.height);
+      bctx.fillStyle = '#020617';
+      bctx.fillRect(0, 0, billiardCanvas.width, billiardCanvas.height);
+      drawGuides();
+      drawBoundary();
+      drawTrajectory();
+      drawPhaseSpace();
+    }
+
+    function animate() {
+      if (running && state && geometry) step(+dtSlider.value);
+      drawAll();
+      requestAnimationFrame(animate);
+    }
+
+    [symmetrySlider, rSlider, trailSlider, dtSlider, x0Slider, y0Slider, angSlider, traceMode].forEach(el => {
+      el.addEventListener('input', updateLabels);
+    });
+
+    symmetrySlider.addEventListener('change', resetState);
+    rSlider.addEventListener('change', resetState);
+    traceMode.addEventListener('change', drawAll);
+    applyBtn.addEventListener('click', resetState);
+
+    exampleBtn.addEventListener('click', () => {
+      symmetrySlider.value = '3';
+      rSlider.value = '0.25';
+      trailSlider.value = '600';
+      dtSlider.value = '0.85';
+      x0Slider.value = '0.02';
+      y0Slider.value = '0.08';
+      angSlider.value = '31';
+      traceMode.value = 'on';
+      updateLabels();
+      resetState();
+    });
+
+    toggleBtn.addEventListener('click', () => {
+      running = !running;
+      toggleBtn.textContent = running ? 'Pausar' : 'Retomar';
+    });
+
+    clearBtn.addEventListener('click', () => {
+      resetState();
+    });
+
+    resizeCanvases();
+    updateLabels();
+    resetState();
+    animate();
+  </script>
+</body>
+</html>
